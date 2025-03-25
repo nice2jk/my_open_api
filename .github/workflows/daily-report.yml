@@ -2,7 +2,7 @@ name: Daily GPT Digest
 
 on:
   schedule:
-    - cron: '30 5 * * *'  # 한국 시간 오전 8시 = UTC 기준 전날 23시
+    - cron: '30 5 * * *'  # KST 오후 2:30 = UTC 오전 5:30
   workflow_dispatch:       # 수동 실행도 가능하게
 
 jobs:
@@ -12,7 +12,7 @@ jobs:
     steps:
       - name: Ask ChatGPT and send to Slack
         run: |
-          curl https://api.openai.com/v1/chat/completions \
+          RESPONSE=$(curl -s https://api.openai.com/v1/chat/completions \
             -H "Authorization: Bearer ${{ secrets.OPENAI_API_KEY }}" \
             -H "Content-Type: application/json" \
             -d '{
@@ -20,8 +20,19 @@ jobs:
               "messages": [
                 {"role": "user", "content": "오늘의 AI 트렌드 3가지를 요약해줘. 100자 이내로 간결하게."}
               ]
-            }' | jq -r '.choices[0].message.content' > result.txt
+            }')
+
+          echo "=== OpenAI 응답 내용 ==="
+          echo "$RESPONSE"
+
+          RESULT=$(echo "$RESPONSE" | jq -r '.choices[0].message.content')
+          echo "$RESULT" > result.txt
+
+          # Slack 전송용 JSON 생성
+          PAYLOAD=$(jq -n --arg text "$RESULT" '{text: $text}')
+          echo "Sending to Slack:"
+          echo "$PAYLOAD"
 
           curl -X POST -H 'Content-type: application/json' \
-            --data "{"text":"$(cat result.txt)"}" \
+            --data "$PAYLOAD" \
             ${{ secrets.SLACK_WEBHOOK_URL }}
