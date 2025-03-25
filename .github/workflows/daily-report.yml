@@ -23,5 +23,5 @@ jobs:
             }' | jq -r '.choices[0].message.content' > result.txt
 
           curl -X POST -H 'Content-type: application/json' \
-            --data "{\"text\":\"$(cat result.txt)\"}" \
+            --data "{"text":"$(cat result.txt)"}" \
             ${{ secrets.SLACK_WEBHOOK_URL }}
